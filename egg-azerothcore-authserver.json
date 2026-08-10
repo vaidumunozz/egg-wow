@@ -1,0 +1,92 @@
+{
+    "_comment": "DO NOT EDIT: FILE GENERATED FOR AzerothCore AuthServer - Import via Admin > Eggs > Import Egg",
+    "meta": {
+        "version": "PTDL_v2",
+        "update_url": null
+    },
+    "exported_at": "2026-08-10T20:49:27+00:00",
+    "name": "AzerothCore - AuthServer",
+    "author": "admin@example.com",
+    "description": "AuthServer de AzerothCore (WoW 3.3.5a) usando la imagen Docker oficial precompilada del proyecto AzerothCore. Maneja el login de cuentas y la lista de realms.",
+    "features": null,
+    "docker_images": {
+        "AzerothCore (master)": "acore/ac-wotlk-authserver:master"
+    },
+    "file_denylist": [],
+    "startup": "./authserver",
+    "config": {
+        "files": "{}",
+        "startup": "{\r\n    \"done\": \"Using SOAP-based remote console\"\r\n}",
+        "logs": "{}",
+        "stop": "^C"
+    },
+    "scripts": {
+        "installation": {
+            "script": "#!/bin/bash\r\n## File: AzerothCore AuthServer Egg\r\n## La imagen Docker ya viene precompilada, asi que no hace falta build.\r\n\r\nmkdir -p /mnt/server/env/dist/etc\r\necho \"Instalacion completada.\"\r\necho \"La configuracion (authserver.conf) se generara automaticamente al primer arranque.\"\r\necho \"Asegurate de tener aplicadas las migraciones SQL de la base 'auth' antes de iniciar.\"\r\n",
+            "container": "ghcr.io/pelican-eggs/installers:debian",
+            "entrypoint": "bash"
+        }
+    },
+    "variables": [
+        {
+            "name": "DB Host",
+            "description": "IP o hostname del servidor MySQL/MariaDB (base de datos auth)",
+            "env_variable": "AC_AUTH_DB_HOST",
+            "default_value": "127.0.0.1",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string",
+            "field_type": "text"
+        },
+        {
+            "name": "DB Port",
+            "description": "Puerto del servidor MySQL/MariaDB",
+            "env_variable": "AC_AUTH_DB_PORT",
+            "default_value": "3306",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|numeric",
+            "field_type": "text"
+        },
+        {
+            "name": "DB Name",
+            "description": "Nombre de la base de datos de autenticacion",
+            "env_variable": "AC_AUTH_DB_NAME",
+            "default_value": "acore_auth",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string",
+            "field_type": "text"
+        },
+        {
+            "name": "DB User",
+            "description": "Usuario de MySQL con permisos sobre la base auth",
+            "env_variable": "AC_AUTH_DB_USER",
+            "default_value": "acore",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string",
+            "field_type": "text"
+        },
+        {
+            "name": "DB Password",
+            "description": "Password del usuario de MySQL",
+            "env_variable": "AC_AUTH_DB_PASS",
+            "default_value": "",
+            "user_viewable": false,
+            "user_editable": true,
+            "rules": "required|string",
+            "field_type": "text"
+        },
+        {
+            "name": "Auth Server Port",
+            "description": "Puerto donde escucha el authserver (por defecto 3724)",
+            "env_variable": "AC_AUTH_PORT",
+            "default_value": "3724",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|numeric",
+            "field_type": "text"
+        }
+    ]
+}
