@@ -1,0 +1,112 @@
+{
+    "_comment": "DO NOT EDIT: FILE GENERATED FOR AzerothCore WorldServer - Import via Admin > Eggs > Import Egg",
+    "meta": {
+        "version": "PTDL_v2",
+        "update_url": null
+    },
+    "exported_at": "2026-08-10T20:49:27+00:00",
+    "name": "AzerothCore - WorldServer",
+    "author": "admin@example.com",
+    "description": "WorldServer de AzerothCore (WoW 3.3.5a) usando la imagen Docker oficial precompilada. Descarga automaticamente maps/vmaps/mmaps/dbc durante la instalacion. Requiere que el AuthServer y la base de datos MySQL esten disponibles.",
+    "features": null,
+    "docker_images": {
+        "AzerothCore (master)": "acore/ac-wotlk-worldserver:master"
+    },
+    "file_denylist": [],
+    "startup": "./worldserver",
+    "config": {
+        "files": "{}",
+        "startup": "{\r\n    \"done\": \"World initialized\"\r\n}",
+        "logs": "{}",
+        "stop": "^C"
+    },
+    "scripts": {
+        "installation": {
+            "script": "#!/bin/bash\r\n## File: AzerothCore WorldServer Egg\r\n## Descarga los datos del cliente (maps, vmaps, mmaps, dbc) necesarios\r\n## para que el worldserver pueda arrancar.\r\nset -e\r\n\r\napt-get update\r\napt-get install -y curl unzip\r\n\r\nmkdir -p /mnt/server/data\r\ncd /mnt/server/data\r\n\r\necho \"Descargando datos del cliente (esto puede tardar varios minutos)...\"\r\ncurl -L -o data.zip \"https://github.com/wowgaming/client-data/releases/download/v16/data.zip\"\r\nunzip -o data.zip\r\nrm -f data.zip\r\n\r\necho \"Datos extraidos correctamente en /mnt/server/data\"\r\necho \"Instalacion completada.\"\r\necho \"IMPORTANTE: antes del primer arranque, aplica las migraciones SQL de\"\r\necho \"las bases 'world' y 'characters' a tu servidor MySQL.\"\r\n",
+            "container": "ghcr.io/pelican-eggs/installers:debian",
+            "entrypoint": "bash"
+        }
+    },
+    "variables": [
+        {
+            "name": "DB Host",
+            "description": "IP o hostname del servidor MySQL/MariaDB",
+            "env_variable": "AC_DB_HOST",
+            "default_value": "127.0.0.1",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string",
+            "field_type": "text"
+        },
+        {
+            "name": "DB Port",
+            "description": "Puerto del servidor MySQL/MariaDB",
+            "env_variable": "AC_DB_PORT",
+            "default_value": "3306",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|numeric",
+            "field_type": "text"
+        },
+        {
+            "name": "World DB Name",
+            "description": "Nombre de la base de datos world",
+            "env_variable": "AC_WORLD_DB_NAME",
+            "default_value": "acore_world",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string",
+            "field_type": "text"
+        },
+        {
+            "name": "Characters DB Name",
+            "description": "Nombre de la base de datos characters",
+            "env_variable": "AC_CHARACTERS_DB_NAME",
+            "default_value": "acore_characters",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string",
+            "field_type": "text"
+        },
+        {
+            "name": "DB User",
+            "description": "Usuario de MySQL con permisos sobre world/characters",
+            "env_variable": "AC_DB_USER",
+            "default_value": "acore",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|string",
+            "field_type": "text"
+        },
+        {
+            "name": "DB Password",
+            "description": "Password del usuario de MySQL",
+            "env_variable": "AC_DB_PASS",
+            "default_value": "",
+            "user_viewable": false,
+            "user_editable": true,
+            "rules": "required|string",
+            "field_type": "text"
+        },
+        {
+            "name": "World Server Port",
+            "description": "Puerto donde escucha el worldserver (por defecto 8085)",
+            "env_variable": "AC_WORLD_PORT",
+            "default_value": "8085",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|numeric",
+            "field_type": "text"
+        },
+        {
+            "name": "SOAP Port",
+            "description": "Puerto de la consola remota SOAP (opcional)",
+            "env_variable": "AC_SOAP_PORT",
+            "default_value": "7878",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "nullable|numeric",
+            "field_type": "text"
+        }
+    ]
+}
