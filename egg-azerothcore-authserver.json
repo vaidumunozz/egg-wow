@@ -1,81 +1,71 @@
 {
-    "_comment": "AzerothCore AuthServer",
+    "_comment": "AzerothCore AuthServer - Import via Admin > Eggs > Import Egg",
     "meta": {
         "version": "PTDL_v2",
         "update_url": null
     },
-    "exported_at": "2026-08-23T00:00:00+00:00",
+    "exported_at": "2026-08-24T00:00:00+00:00",
     "name": "AzerothCore - AuthServer",
     "author": "admin@example.com",
-    "description": "AuthServer de AzerothCore (WoW 3.3.5a). Usa la imagen Docker oficial precompilada del proyecto (acore/ac-wotlk-authserver). Gestiona el login de cuentas y la lista de realms. Requiere una base de datos MySQL/MariaDB externa ya accesible desde el contenedor, con la base acore_auth previamente creada e importada.",
+    "description": "AuthServer de AzerothCore (WoW 3.3.5a), imagen oficial acore/ac-wotlk-authserver. Toda la configuracion se entrega mediante variables de entorno con el mismo nombre exacto que usa el mecanismo oficial de override de AzerothCore (AC_*), por lo que funciona sin modificar la imagen. Requiere MySQL/MariaDB externo con 'acore_auth' ya importada.",
     "features": null,
     "docker_images": {
         "AzerothCore (master)": "acore/ac-wotlk-authserver:master",
         "AzerothCore (16.0.0-dev)": "acore/ac-wotlk-authserver:16.0.0-dev"
     },
     "file_denylist": [],
-    "startup": "export AC_LOGIN_DATABASE_INFO=\"${DB_HOST};${DB_PORT};${DB_USER};${DB_PASSWORD};${DB_NAME}\" && export AC_REALM_SERVER_PORT=\"${SERVER_PORT}\" && export AC_BIND_IP=\"0.0.0.0\" && export AC_LOGS_DIR=\"/home/container/logs\" && mkdir -p /home/container/logs && cd /azerothcore/env/dist/bin && exec ./authserver",
+    "startup": "authserver",
     "config": {
         "files": "{}",
-        "startup": "{\r\n    \"done\": \"Started auth database connection pool.\"\r\n}",
+        "startup": "{\n    \"done\": \"Started auth database connection pool.\"\n}",
         "logs": "{}",
         "stop": "^C"
     },
     "scripts": {
         "installation": {
-            "script": "#!/bin/bash\n## AzerothCore AuthServer - instalacion\n## La imagen Docker del runtime (acore/ac-wotlk-authserver) ya trae el\n## binario precompilado, asi que aqui solo preparamos la estructura\n## persistente de directorios. No se descarga ni se modifica nada mas.\nset -e\n\nmkdir -p /mnt/server/logs\n\necho \"=========================================================\"\necho \"Instalacion completada.\"\necho \"\"\necho \"IMPORTANTE - antes de iniciar este servidor debes tener:\"\necho \" 1) Un servidor MySQL/MariaDB EXTERNO accesible desde este\"\necho \"    contenedor (host, puerto, usuario y password validos).\"\necho \" 2) La base de datos 'acore_auth' ya creada e importada con\"\necho \"    el SQL base de AzerothCore (data/sql/base + updates).\"\necho \"    Este Egg NO ejecuta migraciones SQL automaticamente.\"\necho \" 3) El authserver.conf.dist por defecto se copia solo dentro\"\necho \"    del propio contenedor de runtime (no en este paso); toda\"\necho \"    la configuracion real se inyecta via variables de entorno\"\necho \"    (AC_LOGIN_DATABASE_INFO, AC_REALM_SERVER_PORT, AC_BIND_IP),\"\necho \"    que es el mecanismo de override oficial de AzerothCore.\"\necho \"=========================================================\"\n",
+            "script": "#!/bin/bash\n## AzerothCore AuthServer - instalacion\n## La imagen de runtime (acore/ac-wotlk-authserver) trae el binario\n## precompilado y su propio ENTRYPOINT/CMD ya definidos (\"authserver\",\n## resuelto via PATH=/azerothcore/env/dist/bin). Este script NO instala\n## software: unicamente prepara la carpeta persistente de logs, que\n## Pelican monta como /home/container en el contenedor de ejecucion.\nset -e\n\nmkdir -p /mnt/server/logs\n\necho \"=========================================================\"\necho \"Instalacion completada.\"\necho \"\"\necho \"IMPORTANTE - antes de iniciar este servidor debes tener:\"\necho \" 1) Un servidor MySQL/MariaDB EXTERNO accesible desde este\"\necho \"    contenedor (host, puerto, usuario y password validos).\"\necho \" 2) La base de datos 'acore_auth' ya creada e importada con\"\necho \"    el SQL base de AzerothCore. Este Egg NO ejecuta migraciones\"\necho \"    SQL automaticamente.\"\necho \" 3) La variable 'AC Login Database Info' (pestana Variables)\"\necho \"    rellena con el formato: host;puerto;usuario;password;acore_auth\"\necho \"=========================================================\"\n",
             "container": "ghcr.io/pelican-eggs/installers:debian",
             "entrypoint": "bash"
         }
     },
     "variables": [
         {
-            "name": "MySQL Host",
-            "description": "IP o hostname del servidor MySQL/MariaDB externo (NO se incluye MySQL dentro de este contenedor).",
-            "env_variable": "DB_HOST",
-            "default_value": "127.0.0.1",
-            "user_viewable": true,
-            "user_editable": true,
-            "rules": "required|string",
-            "field_type": "text"
-        },
-        {
-            "name": "MySQL Port",
-            "description": "Puerto del servidor MySQL/MariaDB externo.",
-            "env_variable": "DB_PORT",
-            "default_value": "3306",
-            "user_viewable": true,
-            "user_editable": true,
-            "rules": "required|numeric|between:1,65535",
-            "field_type": "text"
-        },
-        {
-            "name": "MySQL User",
-            "description": "Usuario de MySQL con permisos (SELECT/INSERT/UPDATE/DELETE) sobre la base acore_auth.",
-            "env_variable": "DB_USER",
-            "default_value": "acore",
-            "user_viewable": true,
-            "user_editable": true,
-            "rules": "required|string",
-            "field_type": "text"
-        },
-        {
-            "name": "MySQL Password",
-            "description": "Password del usuario de MySQL indicado arriba.",
-            "env_variable": "DB_PASSWORD",
-            "default_value": "",
+            "name": "AC Login Database Info",
+            "description": "Cadena de conexion a la base de autenticacion, formato exacto de AzerothCore: host;puerto;usuario;password;basededatos. Ejemplo: 127.0.0.1;3306;acore;MiPassword;acore_auth. Se inyecta directamente como la variable de entorno oficial AC_LOGIN_DATABASE_INFO.",
+            "env_variable": "AC_LOGIN_DATABASE_INFO",
+            "default_value": "127.0.0.1;3306;acore;CAMBIA_ESTE_PASSWORD;acore_auth",
             "user_viewable": false,
             "user_editable": true,
             "rules": "required|string",
             "field_type": "text"
         },
         {
-            "name": "Auth Database Name",
-            "description": "Nombre de la base de datos de autenticacion (LoginDatabaseInfo).",
-            "env_variable": "DB_NAME",
-            "default_value": "acore_auth",
+            "name": "Realm Server Port",
+            "description": "Puerto TCP en el que escucha AuthServer dentro del contenedor. Debe coincidir con la allocation principal asignada a este servidor en Pelican/Pterodactyl (se autocompleta con ella).",
+            "env_variable": "AC_REALM_SERVER_PORT",
+            "default_value": "{{server.build.default.port}}",
             "user_viewable": true,
             "user_editable": true,
+            "rules": "required|numeric|between:1,65535",
+            "field_type": "text"
+        },
+        {
+            "name": "Bind IP",
+            "description": "Direccion en la que escucha AuthServer dentro del contenedor. Debe permanecer en 0.0.0.0 (escucha en todas las interfaces internas); Pelican es quien expone la allocation hacia el exterior.",
+            "env_variable": "AC_BIND_IP",
+            "default_value": "0.0.0.0",
+            "user_viewable": true,
+            "user_editable": false,
+            "rules": "required|string",
+            "field_type": "text"
+        },
+        {
+            "name": "Logs Dir",
+            "description": "Carpeta persistente donde AuthServer escribe sus logs. No editar: debe apuntar dentro de /home/container para sobrevivir a reinicios.",
+            "env_variable": "AC_LOGS_DIR",
+            "default_value": "/home/container/logs",
+            "user_viewable": true,
+            "user_editable": false,
             "rules": "required|string",
             "field_type": "text"
         }
