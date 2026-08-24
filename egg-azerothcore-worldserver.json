@@ -1,108 +1,68 @@
 {
-    "_comment": "AzerothCore WorldServer",
+    "_comment": "AzerothCore WorldServer - Import via Admin > Eggs > Import Egg",
     "meta": {
         "version": "PTDL_v2",
         "update_url": null
     },
-    "exported_at": "2026-08-23T00:00:00+00:00",
+    "exported_at": "2026-08-24T00:00:00+00:00",
     "name": "AzerothCore - WorldServer",
     "author": "admin@example.com",
-    "description": "WorldServer de AzerothCore (WoW 3.3.5a). Usa la imagen Docker oficial precompilada del proyecto (acore/ac-wotlk-worldserver). Requiere: AuthServer y MySQL/MariaDB externos accesibles, las bases acore_auth/acore_world/acore_characters ya importadas, y los datos del cliente 3.3.5a (dbc/maps/vmaps/mmaps/Cameras) en el volumen de datos. Si no se proveen manualmente, la instalacion los descarga desde la fuente oficial usada por el propio instalador de AzerothCore (wowgaming/client-data).",
+    "description": "WorldServer de AzerothCore (WoW 3.3.5a), imagen oficial acore/ac-wotlk-worldserver. Toda la configuracion se entrega mediante variables de entorno con el mismo nombre exacto que usa el mecanismo oficial de override de AzerothCore (AC_*), por lo que funciona sin modificar la imagen. Requiere MySQL/MariaDB externo con acore_auth/acore_world/acore_characters ya importadas y los datos de cliente 3.3.5a en el volumen de datos.",
     "features": null,
     "docker_images": {
         "AzerothCore (master)": "acore/ac-wotlk-worldserver:master",
         "AzerothCore (16.0.0-dev)": "acore/ac-wotlk-worldserver:16.0.0-dev"
     },
     "file_denylist": [],
-    "startup": "export AC_LOGIN_DATABASE_INFO=\"${DB_HOST};${DB_PORT};${DB_USER};${DB_PASSWORD};${DB_AUTH_NAME}\" && export AC_WORLD_DATABASE_INFO=\"${DB_HOST};${DB_PORT};${DB_USER};${DB_PASSWORD};${DB_WORLD_NAME}\" && export AC_CHARACTER_DATABASE_INFO=\"${DB_HOST};${DB_PORT};${DB_USER};${DB_PASSWORD};${DB_CHARACTERS_NAME}\" && export AC_REALM_ID=\"${REALM_ID}\" && export AC_WORLD_SERVER_PORT=\"${SERVER_PORT}\" && export AC_BIND_IP=\"0.0.0.0\" && export AC_SOAP_ENABLED=\"${SOAP_ENABLED}\" && export AC_SOAP_IP=\"0.0.0.0\" && export AC_SOAP_PORT=\"${SOAP_PORT}\" && export AC_DATA_DIR=\"/home/container/data\" && export AC_LOGS_DIR=\"/home/container/logs\" && mkdir -p /home/container/logs /home/container/data && cd /azerothcore/env/dist/bin && exec ./worldserver",
+    "startup": "worldserver",
     "config": {
         "files": "{}",
-        "startup": "{\r\n    \"done\": \"World Initialized In\"\r\n}",
+        "startup": "{\n    \"done\": \"World Initialized In\"\n}",
         "logs": "{}",
         "stop": "^C"
     },
     "scripts": {
         "installation": {
-            "script": "#!/bin/bash\n## AzerothCore WorldServer - instalacion\n## Prepara los directorios persistentes de datos y logs, y provee\n## (solo si el administrador no los subio ya manualmente por SFTP)\n## los datos de cliente 3.3.5a necesarios: dbc, maps, vmaps, mmaps,\n## Cameras. La fuente usada es EXACTAMENTE la misma que usa el\n## instalador oficial de AzerothCore (apps/installer/includes/functions.sh,\n## funcion inst_download_client_data): wowgaming/client-data.\n## No se redistribuye ningun archivo propietario de Blizzard: ese\n## repositorio de terceros solo contiene los archivos de datos que el\n## propio proyecto AzerothCore referencia y recomienda oficialmente.\nset -e\n\napt-get update -qq\napt-get install -y -qq curl unzip > /dev/null\n\nmkdir -p /mnt/server/data\nmkdir -p /mnt/server/logs\n\nDATA_VERSION=\"v20.0\"\nVERSION_FILE=\"/mnt/server/data/data-version\"\n\nHAS_DATA=0\nif [ -d /mnt/server/data/dbc ] && [ -d /mnt/server/data/maps ]; then\n    HAS_DATA=1\nfi\n\nif [ \"$HAS_DATA\" = \"1\" ]; then\n    echo \"Se detectaron datos de cliente ya presentes en /mnt/server/data (dbc/ y maps/).\"\n    echo \"No se descarga nada: se respetan los datos proporcionados manualmente por el administrador.\"\nelif [ -f \"$VERSION_FILE\" ] && grep -q \"$DATA_VERSION\" \"$VERSION_FILE\"; then\n    echo \"Los datos version $DATA_VERSION ya estan marcados como instalados. Omitiendo descarga.\"\nelse\n    echo \"No se encontraron datos de cliente. Descargando el paquete oficial recomendado por AzerothCore ($DATA_VERSION)...\"\n    echo \"Esto puede tardar varios minutos (varios GB).\"\n    cd /mnt/server/data\n    curl -L -o data.zip \"https://github.com/wowgaming/client-data/releases/download/${DATA_VERSION}/data.zip\"\n    unzip -q -o data.zip -d /mnt/server/data/\n    rm -f data.zip\n    echo \"INSTALLED_VERSION=${DATA_VERSION}\" > \"$VERSION_FILE\"\n    echo \"Datos extraidos correctamente en /mnt/server/data\"\nfi\n\necho \"=========================================================\"\necho \"Instalacion completada.\"\necho \"\"\necho \"IMPORTANTE - antes de iniciar este servidor debes tener:\"\necho \" 1) Un AuthServer y un MySQL/MariaDB EXTERNOS ya funcionando.\"\necho \" 2) Las bases 'acore_auth', 'acore_world' y 'acore_characters'\"\necho \"    ya creadas e importadas con el SQL base de AzerothCore.\"\necho \"    Este Egg NO ejecuta migraciones SQL automaticamente.\"\necho \" 3) Los datos dbc/maps/vmaps/mmaps/Cameras presentes en\"\necho \"    /mnt/server/data (ya verificado/preparado arriba).\"\necho \"    Si prefieres tus propios datos extraidos manualmente,\"\necho \"    subelos por SFTP a la carpeta data/ ANTES de instalar.\"\necho \"=========================================================\"\n",
+            "script": "#!/bin/bash\n## AzerothCore WorldServer - instalacion\n## La imagen de runtime (acore/ac-wotlk-worldserver) trae el binario\n## precompilado y su propio ENTRYPOINT/CMD ya definidos (\"worldserver\").\n## Este script prepara data/ y logs/ persistentes, y solo si el\n## administrador no subio ya los datos de cliente por SFTP, descarga\n## el paquete oficial referenciado por el propio instalador de\n## AzerothCore (apps/installer/includes/functions.sh, funcion\n## inst_download_client_data): wowgaming/client-data.\n## No se redistribuye ningun archivo propietario de Blizzard.\nset -e\n\napt-get update -qq\napt-get install -y -qq curl unzip > /dev/null\n\nmkdir -p /mnt/server/data\nmkdir -p /mnt/server/logs\n\nDATA_VERSION=\"v20.0\"\nVERSION_FILE=\"/mnt/server/data/data-version\"\n\nHAS_DATA=0\nif [ -d /mnt/server/data/dbc ] && [ -d /mnt/server/data/maps ] && [ -d /mnt/server/data/vmaps ]; then\n    HAS_DATA=1\nfi\n\nif [ \"$HAS_DATA\" = \"1\" ]; then\n    echo \"Se detectaron datos de cliente ya presentes en /mnt/server/data (dbc/, maps/, vmaps/).\"\n    echo \"No se descarga nada: se respetan los datos proporcionados manualmente por el administrador.\"\nelif [ -f \"$VERSION_FILE\" ] && grep -q \"$DATA_VERSION\" \"$VERSION_FILE\"; then\n    echo \"Los datos version $DATA_VERSION ya estan marcados como instalados. Omitiendo descarga.\"\nelse\n    echo \"No se encontraron datos de cliente. Descargando el paquete oficial recomendado por AzerothCore ($DATA_VERSION)...\"\n    echo \"Esto puede tardar varios minutos (varios GB).\"\n    cd /mnt/server/data\n    curl -L -o data.zip \"https://github.com/wowgaming/client-data/releases/download/${DATA_VERSION}/data.zip\"\n    unzip -q -o data.zip -d /mnt/server/data/\n    rm -f data.zip\n    echo \"INSTALLED_VERSION=${DATA_VERSION}\" > \"$VERSION_FILE\"\n    echo \"Datos extraidos correctamente en /mnt/server/data\"\nfi\n\necho \"=========================================================\"\necho \"Instalacion completada.\"\necho \"\"\necho \"IMPORTANTE - antes de iniciar este servidor debes tener:\"\necho \" 1) Un AuthServer y un MySQL/MariaDB EXTERNOS ya funcionando.\"\necho \" 2) Las bases 'acore_auth', 'acore_world' y 'acore_characters'\"\necho \"    ya creadas e importadas con el SQL base de AzerothCore.\"\necho \"    Este Egg NO ejecuta migraciones SQL automaticamente.\"\necho \" 3) Las variables AC Login/World/Character Database Info\"\necho \"    (pestana Variables) rellenas correctamente.\"\necho \" 4) Los datos dbc/maps/vmaps/mmaps/Cameras presentes en\"\necho \"    /mnt/server/data (ya verificado/preparado arriba).\"\necho \"=========================================================\"\n",
             "container": "ghcr.io/pelican-eggs/installers:debian",
             "entrypoint": "bash"
         }
     },
     "variables": [
         {
-            "name": "MySQL Host",
-            "description": "IP o hostname del servidor MySQL/MariaDB externo (NO se incluye MySQL dentro de este contenedor).",
-            "env_variable": "DB_HOST",
-            "default_value": "127.0.0.1",
-            "user_viewable": true,
-            "user_editable": true,
-            "rules": "required|string",
-            "field_type": "text"
-        },
-        {
-            "name": "MySQL Port",
-            "description": "Puerto del servidor MySQL/MariaDB externo.",
-            "env_variable": "DB_PORT",
-            "default_value": "3306",
-            "user_viewable": true,
-            "user_editable": true,
-            "rules": "required|numeric|between:1,65535",
-            "field_type": "text"
-        },
-        {
-            "name": "MySQL User",
-            "description": "Usuario de MySQL con permisos sobre acore_auth, acore_world y acore_characters.",
-            "env_variable": "DB_USER",
-            "default_value": "acore",
-            "user_viewable": true,
-            "user_editable": true,
-            "rules": "required|string",
-            "field_type": "text"
-        },
-        {
-            "name": "MySQL Password",
-            "description": "Password del usuario de MySQL indicado arriba.",
-            "env_variable": "DB_PASSWORD",
-            "default_value": "",
+            "name": "AC Login Database Info",
+            "description": "Cadena de conexion a la base de autenticacion, formato: host;puerto;usuario;password;acore_auth. Debe ser la misma base que usa el AuthServer. Se inyecta como AC_LOGIN_DATABASE_INFO.",
+            "env_variable": "AC_LOGIN_DATABASE_INFO",
+            "default_value": "127.0.0.1;3306;acore;CAMBIA_ESTE_PASSWORD;acore_auth",
             "user_viewable": false,
             "user_editable": true,
             "rules": "required|string",
             "field_type": "text"
         },
         {
-            "name": "Auth Database Name",
-            "description": "Nombre de la base de datos de autenticacion (debe ser la misma que usa el AuthServer).",
-            "env_variable": "DB_AUTH_NAME",
-            "default_value": "acore_auth",
-            "user_viewable": true,
+            "name": "AC World Database Info",
+            "description": "Cadena de conexion a la base del mundo, formato: host;puerto;usuario;password;acore_world. Se inyecta como AC_WORLD_DATABASE_INFO.",
+            "env_variable": "AC_WORLD_DATABASE_INFO",
+            "default_value": "127.0.0.1;3306;acore;CAMBIA_ESTE_PASSWORD;acore_world",
+            "user_viewable": false,
             "user_editable": true,
             "rules": "required|string",
             "field_type": "text"
         },
         {
-            "name": "World Database Name",
-            "description": "Nombre de la base de datos del mundo (WorldDatabaseInfo).",
-            "env_variable": "DB_WORLD_NAME",
-            "default_value": "acore_world",
-            "user_viewable": true,
-            "user_editable": true,
-            "rules": "required|string",
-            "field_type": "text"
-        },
-        {
-            "name": "Characters Database Name",
-            "description": "Nombre de la base de datos de personajes (CharacterDatabaseInfo).",
-            "env_variable": "DB_CHARACTERS_NAME",
-            "default_value": "acore_characters",
-            "user_viewable": true,
+            "name": "AC Character Database Info",
+            "description": "Cadena de conexion a la base de personajes, formato: host;puerto;usuario;password;acore_characters. Se inyecta como AC_CHARACTER_DATABASE_INFO.",
+            "env_variable": "AC_CHARACTER_DATABASE_INFO",
+            "default_value": "127.0.0.1;3306;acore;CAMBIA_ESTE_PASSWORD;acore_characters",
+            "user_viewable": false,
             "user_editable": true,
             "rules": "required|string",
             "field_type": "text"
         },
         {
             "name": "Realm ID",
-            "description": "ID del realm (debe coincidir con el valor 'id' de la fila correspondiente en acore_auth.realmlist).",
-            "env_variable": "REALM_ID",
+            "description": "ID del realm que sirve este WorldServer. Debe coincidir con el campo 'id' de la fila correspondiente en acore_auth.realmlist.",
+            "env_variable": "AC_REALM_ID",
             "default_value": "1",
             "user_viewable": true,
             "user_editable": true,
@@ -110,9 +70,29 @@
             "field_type": "text"
         },
         {
+            "name": "World Server Port",
+            "description": "Puerto TCP en el que escucha WorldServer dentro del contenedor. Debe coincidir con la allocation principal asignada a este servidor (se autocompleta con ella).",
+            "env_variable": "AC_WORLD_SERVER_PORT",
+            "default_value": "{{server.build.default.port}}",
+            "user_viewable": true,
+            "user_editable": true,
+            "rules": "required|numeric|between:1,65535",
+            "field_type": "text"
+        },
+        {
+            "name": "Bind IP",
+            "description": "Direccion en la que escucha WorldServer dentro del contenedor. Debe permanecer en 0.0.0.0.",
+            "env_variable": "AC_BIND_IP",
+            "default_value": "0.0.0.0",
+            "user_viewable": true,
+            "user_editable": false,
+            "rules": "required|string",
+            "field_type": "text"
+        },
+        {
             "name": "SOAP Habilitado",
             "description": "1 para habilitar la consola remota SOAP (usada por CMS/paneles externos), 0 para deshabilitarla.",
-            "env_variable": "SOAP_ENABLED",
+            "env_variable": "AC_SOAP_ENABLED",
             "default_value": "0",
             "user_viewable": true,
             "user_editable": true,
@@ -120,13 +100,43 @@
             "field_type": "text"
         },
         {
+            "name": "SOAP IP",
+            "description": "Direccion en la que escucha el servicio SOAP dentro del contenedor. Dejar en 0.0.0.0 si SOAP esta habilitado.",
+            "env_variable": "AC_SOAP_IP",
+            "default_value": "0.0.0.0",
+            "user_viewable": true,
+            "user_editable": false,
+            "rules": "required|string",
+            "field_type": "text"
+        },
+        {
             "name": "SOAP Port",
-            "description": "Puerto de la consola remota SOAP. Solo se usa si SOAP esta habilitado; asigna una allocation adicional que coincida con este puerto.",
-            "env_variable": "SOAP_PORT",
+            "description": "Puerto del servicio SOAP. Solo aplica si SOAP esta habilitado. Debes asignar una allocation adicional a este servidor con este mismo numero de puerto para que sea alcanzable.",
+            "env_variable": "AC_SOAP_PORT",
             "default_value": "7878",
             "user_viewable": true,
             "user_editable": true,
             "rules": "required|numeric|between:1,65535",
+            "field_type": "text"
+        },
+        {
+            "name": "Data Dir",
+            "description": "Carpeta persistente con dbc/maps/vmaps/mmaps/Cameras. No editar: debe apuntar dentro de /home/container para sobrevivir a reinicios y no perder los datos ya descargados.",
+            "env_variable": "AC_DATA_DIR",
+            "default_value": "/home/container/data",
+            "user_viewable": true,
+            "user_editable": false,
+            "rules": "required|string",
+            "field_type": "text"
+        },
+        {
+            "name": "Logs Dir",
+            "description": "Carpeta persistente donde WorldServer escribe sus logs. No editar.",
+            "env_variable": "AC_LOGS_DIR",
+            "default_value": "/home/container/logs",
+            "user_viewable": true,
+            "user_editable": false,
+            "rules": "required|string",
             "field_type": "text"
         }
     ]
